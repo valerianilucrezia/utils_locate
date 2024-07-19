@@ -38,14 +38,14 @@ class Clonal(Model):
 
     params = {'jumping_prob' : 1e-2,                                              
               'init_probs': torch.tensor([0.2, 0.3, 0.3, 0.1, 0.1]), 
-              'hidden_dim': 5, 
+              'hidden_dim': 3, 
               "CUDA" : False, 
               "prior_ploidy" : 2, 
               "prior_purity" : 1, 
               "fix_purity" : True, 
               "N_bins" : 3000, 
               "scaling_factors" : torch.tensor([1.,1.,1.,1.]),
-              "allele_specific": False}
+              "allele_specific": True}
     
     # This has to be generalized and left empty 
     data_name = set(['baf', 'dr', 'vaf'])
@@ -65,6 +65,7 @@ class Clonal(Model):
 
         if self._params["allele_specific"]:
             Major, minor, tot, x = self.get_Major_minor()
+            #print( Major, minor, tot, x)
             
             self._params["Major"] = Major
             self._params["minor"] = minor
@@ -85,7 +86,7 @@ class Clonal(Model):
         if self._data["baf"] is not None:
             length, n_sequences  = self._data["baf"].shape
             baf_n_trial  = pyro.sample(
-                " baf_n_trial ",
+                "baf_n_trial",
                 dist.Uniform(1, 10000),
             ) 
         else:
@@ -115,10 +116,8 @@ class Clonal(Model):
             purity = pyro.sample("purity", dist.Uniform(0.,1.))
             
         self._params["N_bins"] = length
-                
-                
+        
         with pyro.plate("sequences", n_sequences):
-            
             init_logits = self._params["init_probs"].log()
             trans_logits = probs_x.log()
             
@@ -135,31 +134,28 @@ class Clonal(Model):
                  vaf_n_trial = vaf_n_trial,
                  scaling_factors = self._params["scaling_factors"],
                  purity = purity, 
-                 atak_lk = "P",
-                 batch_shape = [x.shape[0],length]
+                 batch_shape = [x.shape[0], length]
                 ).to_event(1)
 
                 hmm_dist = dist.DiscreteHMM(init_logits, trans_logits, obs_dist)
             pyro.sample("y", hmm_dist, obs=self._data)
-                
+        
     # Autoguide
     def guide(self, *args, **kwargs):
         return AutoDelta(poutine.block(self.model, hide_fn=lambda msg: msg["name"].startswith("x")))
     
     # If allele specific model map the states to the major and minor alleles
     def get_Major_minor(self):
-        # combinations = list(itertools.product(range(1, self._params["hidden_dim"]+1), range(self._params["hidden_dim"]+1)))
-        # major_alleles = [combination[0] for combination in combinations]
-        # minor_alleles = [combination[1] for combination in combinations]
-
         combinations = list(itertools.combinations_with_replacement(range( self._params["hidden_dim"]), 2))[1:]
-        combinations = [(x, y) for x, y in combinations if x + y <=  self._params["hidden_dim"]]
+        
+        major_alleles = [max(combination) for combination in combinations]
+        minor_alleles = [min(combination) for combination in combinations]
 
         major_allele_tensor = torch.tensor(major_alleles).long()
         minor_allele_tensor = torch.tensor(minor_alleles).long()
         x = torch.tensor(list(range(len(major_alleles)))).long()
         tot = major_allele_tensor + minor_allele_tensor
-        
+
         return major_allele_tensor, minor_allele_tensor, tot,  x
     
     

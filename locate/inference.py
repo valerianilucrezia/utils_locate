@@ -189,11 +189,11 @@ class LOCATE:
         params = self._guide_trained()
         
         map_states =  self._model.model_2(self._model, learned_params = params)
-        if self._model._params["has_baf"]:
-            discrete_params = {"CN_Major" : self._model._params["Major"][torch.tensor(map_states)[1:].long()],
-                                "CN_minor" : self._model._params["minor"][torch.tensor(map_states)[1:].long()]}
-        else:
-            discrete_params = {"CN_tot" : torch.tensor(map_states)[1:]}
+        # if self._model._params["has_baf"]:
+        discrete_params = {"CN_Major" : self._model._params["Major"][torch.tensor(map_states)[1:].long()], 
+                           "CN_minor" : self._model._params["minor"][torch.tensor(map_states)[1:].long()]}
+        # else:
+        #     discrete_params = {"CN_tot" : torch.tensor(map_states)[1:]}
             
         if self._CUDA:
             trained_params_dict = {i : params[i].cpu().detach().numpy() for i in params}

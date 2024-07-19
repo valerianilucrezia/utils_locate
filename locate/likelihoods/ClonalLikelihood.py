@@ -21,9 +21,8 @@ class ClonalLikelihood(TorchDistribution):
                  vaf_n_trial = None,
                  scaling_factors = torch.tensor([1.,1.,1.,1.]),
                  purity = 1, 
-                 atak_lk = "P", 
                  batch_shape = None,
-                 validate_args=False):
+                 validate_args = False):
 
         self.x = x
         self.Major = Major
@@ -36,7 +35,6 @@ class ClonalLikelihood(TorchDistribution):
         self.purity = purity
         
         batch_shape = torch.Size(batch_shape)
-        
         super(ClonalLikelihood, self).__init__(batch_shape, validate_args=validate_args)
 
 
@@ -61,7 +59,7 @@ class ClonalLikelihood(TorchDistribution):
                 )
         
         if self.vaf_n_trial is not None:
-            pass
+            vaf_lk = 0
         
         tot_lk = self.scaling_factors[0] * baf_lk + self.scaling_factors[1] * dr_lk        
         return(tot_lk)
