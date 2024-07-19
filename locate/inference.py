@@ -7,10 +7,11 @@ from pyro import poutine
 
 from tqdm import trange
 
-# from segmenter.building_blocks import *
-# from segmenter.model_selection import *
-# from locate.utils import retrieve_params
-# from segmenter.stopping_criteria import all_stopping_criteria
+from locate.likelihoods import ClonalLikelihood
+from locate.likelihoods.utils_likelihood import export_switch
+from locate.model_selection import *
+from locate.utils import retrieve_params
+from locate.stopping_criteria import all_stopping_criteria
 
 
 class LOCATE:
@@ -187,30 +188,12 @@ class LOCATE:
 
         params = self._guide_trained()
         
-        if self._model._name != "SegmentAnything":
-
-            if "data_rna" in self._model._data:
-                if self._model._params["likelihood_rna"]  in ["G", "N"]:
-                    params["segment_factor_rna"] = torch.ones(self._model._data['data_rna'].shape[0])
-
-            if "data_atac" in self._model._data:
-                if self._model._params["likelihood_atac"]  in ["G", "N"]:
-                    params["segment_factor_atac"] = torch.ones(self._model._data['data_atac'].shape[0])
-
-            params["CNA"] = torch.argmax(params["CNV_probabilities"] , axis=(2)) + 1
-
-            print("", flush=True)
-
-            print("Computing assignment probabilities", flush=True)
-            discrete_params = self._model.calculate_cluster_assignements(params)
+        map_states =  self._model.model_2(self._model, learned_params = params)
+        if self._model._params["has_baf"]:
+            discrete_params = {"CN_Major" : self._model._params["Major"][torch.tensor(map_states)[1:].long()],
+                                "CN_minor" : self._model._params["minor"][torch.tensor(map_states)[1:].long()]}
         else:
-            print(params)
-            map_states =  self._model.model_2(self._model, learned_params = params)
-            if self._model._params["has_baf"]:
-                discrete_params = {"CN_Major" : self._model._params["Major"][torch.tensor(map_states)[1:].long()],
-                                  "CN_minor" : self._model._params["minor"][torch.tensor(map_states)[1:].long()]}
-            else:
-                discrete_params = {"CN_tot" : torch.tensor(map_states)[1:]}
+            discrete_params = {"CN_tot" : torch.tensor(map_states)[1:]}
             
         if self._CUDA:
             trained_params_dict = {i : params[i].cpu().detach().numpy() for i in params}

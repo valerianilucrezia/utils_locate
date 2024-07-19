@@ -1,0 +1,252 @@
+---
+title: "Segmenter equations"
+output: 
+  html_document: 
+    toc: true
+    toc_float:
+      collapsed: true
+    theme: united
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Clonal - Likelihood
+
+$\pi$ = purity, $\sigma$ = ploidy, $n_A$ = N Allele A, $n_B$ = N Allele B
+
+### BAF
+
+BAF likelihood of SNPs in a segment $S$ divided in $J$ bins:
+
+$$
+L(b|\phi) = \prod_{j=1}^{J}Beta(b_j|\phi) 
+$$
+
+$\phi = (n_{A}, n_{B}, \pi, n_{SNP_j})$
+
+the distribution has 2 parameters (shape) $\alpha_{BAF}$ and $\beta_{BAF}$ defined as:
+
+$$
+\alpha_{BAF} = \frac{(n_{SNP_j} -2) \times E_{BAF} +1}{1-E_{BAF}} , \beta_{BAF} = n_{SNP_j}
+$$
+
+where
+
+$$ E_{BAF} = \frac{n_B \pi + (1-\pi)}{(n_A + n_B)\pi + 2(1-\pi)}$$ if $\pi=1$ , $E_{BAF} = \frac{ n_B }{n_A + n_B}$
+
+### DR
+
+DR likelihood for SNPs in segment $S$ divided in $J$ bins:
+
+$$
+L(d|\phi, \sigma) = \prod_{j=1}^J \Gamma(d_j|\phi, \sigma)
+$$
+
+$\phi = (n_{A}, n_{B}, \pi, n_{SNP_j})$
+
+where:
+
+-   shape, $k$ or $\alpha$ = $E_{DR} \times \sqrt{n_{SNP_j}} + 1$
+
+-   scale $\sigma = \frac{1}{\sqrt{n_{SNP_j}}}$ or rate $\beta = \sqrt{n_{SNP_j}}$
+
+$$
+E_{DR} = \frac{(n_A + n_B)\pi  + 2(1- \pi)}{\sigma}
+$$
+
+if $\pi = 1$, $E_{DR} = \frac{N_A + N_B}{\sigma}$
+
+### VAF
+
+The likelihood for the number of reads $nv_j$ mapping on a SNV $j$ with coverage $dp_j$ in a segment $S$ divided in $J$ bins:
+
+$$
+L(nv|dp, v) = \prod_{j=1}^J \sum_{m=1}^M v_m Bin (nv_j|dp_j,v_m)
+$$
+
+$$
+v_m = \frac{m\pi}{(n_A + n_B)\pi + 2(1-\pi)}
+$$
+
+if $\pi=1$, clonal_peaks = $\frac{m}{n_A + n_B}$ where $m \in {1,2}$ is the multiplicity of the SNV.
+
+In binomial: $dp = n$, $nv = k$, $\phi_p = p$
+
+``` r
+clonal_vaf_ll <- function(k, n, ps){
+  s <- 0
+  for (peak in 1:length(ps)){
+    s <- s + (1/length(ps)) * dbinom(k, size=n, prob=ps[peak])
+  }
+  return(s)
+
+
+clonal_VAF_LL <- function(NV, DP, clonal_peaks){
+  vaf_ll <- 0
+  for (i in 1:length(NV)) {
+    v <- clonal_vaf_ll(k = NV[i], n = DP[i], ps = clonal_peaks)
+    vaf_ll <- vaf_ll + log(v)
+  }
+  return(vaf_ll)
+}
+```
+
+### MAF
+
+## Subclonal - Likelihood
+
+$$
+n_{A1},n_{B1}, n_{A2}, n_{B2}, \rho, \sigma
+$$
+
+$\rho$ = CFF of sub-clonal, $\sigma$ = ploidy
+
+### BAF
+
+$$
+E_{BAF} = \frac{min(n_{A1}\rho * n_{A2}(1-\rho), n_{B1}\rho * n_{B2}(1-\rho))\pi + (1-\pi)}{(\rho(
+n_{A1} + n_{B1}) + (1-\rho)(
+n_{A2} + n_{B2}))\pi  + 2(1-\pi)}
+$$
+
+### DR
+
+$$
+E_{DR} = \frac{(\rho(n_{A1}+n_{B1}) + (1-\rho)(n_{A2}+n_{B2}) ) \pi + 2(1-\pi)}{\sigma}
+$$
+
+### VAF
+
+**Shared** mutations:
+
+$$
+v_{m1, m2} = \frac{(m_1\rho + m_2(1-\rho)) \pi}{[\rho(n_{A1}+n_{B1}) + (1-\rho)(n_{A2}+n_{B2})]\pi + 2(1-\pi)}
+$$
+
+**Private** mutations of clone $i$:
+
+$$
+v_{m_i} =. \frac{m_i\rho_i\pi}{[\rho(n_{A1}+n_{B1}) + (1-\rho)(n_{A2}+n_{B2})]\pi + 2(1-\pi)}
+$$
+
+## Simulate data
+
+### BAF
+
+``` python
+dp = np.random.poisson(seg.coverage, nsnp) 
+    
+# BAF
+baf = seg.minor / (seg.Major + seg.minor)
+if seg.minor == 0:
+            baf = 0.01
+alpha = ((dp - 2) * baf + 1) / (1 - baf)
+sim_baf = np.random.beta(alpha, dp)
+```
+
+### DR
+
+``` python
+# DR
+dr = (seg.Major + seg.minor) / 2
+sim_dr = np.random.gamma(shape = dr * np.sqrt(dp) + 1, scale = 1/np.sqrt(dp))
+```
+
+### VAF
+
+``` python
+peaks = get_clonal_peaks(seg.Major, seg.minor, purity =  seg.purity)
+mix_prop = np.random.uniform(low = 0, high = 1, size = len(peaks)) 
+    
+mix_prop = mix_prop / sum(mix_prop)
+peaks_of_mutations = np.random.choice(peaks, size = nvaf, replace = True, p = list(mix_prop))
+    
+dp = np.random.poisson(lam = seg.coverage, size = nvaf)
+nv = np.random.binomial(n = seg.coverage, p = peaks_of_mutations, size = nvaf)
+vaf = nv/dp
+
+
+def get_clonal_peaks(M, m, purity):
+  multiplicities = [M, m]
+  n_tot = sum(multiplicities)
+  
+  if (M == 2 or m == 2 ):
+    multiplicities = [1, 2]
+  
+  multiplicities = [i for i in multiplicities if i!=0]
+  
+  peaks = []
+  for m in multiplicities:
+    peaks.append((m * purity) / (n_tot * purity + 2 * (1 - purity)))
+  return(peaks)
+```
+
+### MAF
+
+## Segmentation model
+
+Discrete HMM
+
+$D$ Hidden dimension correspond to total CN states.
+
+Ex. if $D=5$ , CN states $\{1,2,3,4,5\}$
+
+### Initial Probabilities
+
+As many as $D$, can be chosen by the user.
+
+### Opt1: Transition Probabilities
+
+Depends on the mode of the inference: if it allele specific or not.
+
+User can decide the value of the jumping probability $J$ = probability to jump uniformly to another state.
+
+$$
+    \text{probs_x} \sim \text{Dirichlet} \left( (1 - J) \cdot \mathbf{I} + J\right)
+$$\
+
+If not:
+
+``` python
+probs_x = pyro.sample(
+    "probs_x",
+    dist.Dirichlet((1 - jumping_prob) * torch.eye(hidden_dim) + jumping_prob).to_event(1),
+)
+```
+
+If is allele specific:
+
+``` python
+probs_x = pyro.sample(
+    "probs_x",
+    dist.Dirichlet((1 - jumping_prob) * torch.eye(x.shape[0]) + jumping_prob).to_event(1),
+)
+```
+
+where $x$ is the number of states in allele specific mode.
+
+Ex. If I have $D = 5$ to obtain all possible allele specific CN states:
+
+``` python
+D = 5
+combinations = list(itertools.combinations_with_replacement(range(D), 2))[1:]
+combinations = [(x, y) for x, y in combinations if x + y <= D]
+```
+
+That are $[(0, 1), (0, 2), (0, 3), (0, 4), (1, 1), (1, 2), (1, 3), (1, 4), (2, 2), (2, 3)]$
+
+An so the states will be $D=$ length(combinations)
+
+### Emission Probabilities
+
+### Likelihood
+
+### To be taken into account
+
+-   how to do bins
+
+<!-- -->
+
+-   normalization read_count by GC and mappability

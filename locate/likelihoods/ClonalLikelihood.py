@@ -13,15 +13,12 @@ class ClonalLikelihood(TorchDistribution):
 
     def __init__(self,
                  x = None,
-                 cov_atac_mu = None, 
-                 cov_atac_overdispersion = None, 
-                 exp_rna_mu = None,
-                 exp_rna_sd = None,
                  Major = None,
                  minor = None,
                  tot = None,
-                 baf_rna_number_of_trials = None,
-                 baf_atac_number_of_trials = None,
+                 baf_n_trial = None,
+                 dr_n_trial = None,
+                 vaf_n_trial = None,
                  scaling_factors = torch.tensor([1.,1.,1.,1.]),
                  purity = 1, 
                  atak_lk = "P", 
@@ -29,70 +26,42 @@ class ClonalLikelihood(TorchDistribution):
                  validate_args=False):
 
         self.x = x
-        self.cov_atac_mu = cov_atac_mu
-        self.purity = purity
-        self.cov_atac_overdispersion = cov_atac_overdispersion
-        self.exp_rna_mu = exp_rna_mu
-        self.exp_rna_sd = exp_rna_sd
         self.Major = Major
         self.minor = minor
         self.tot = tot
-        self.baf_rna_number_of_trials = baf_rna_number_of_trials
-        self.baf_atac_number_of_trials = baf_atac_number_of_trials
+        self.baf_n_trial = baf_n_trial
+        self.dr_n_trial = dr_n_trial
+        self.vaf_n_trial = vaf_n_trial
         self.scaling_factors = scaling_factors
-        self.atak_lk = atak_lk
-
-      
+        self.purity = purity
+        
         batch_shape = torch.Size(batch_shape)
         
-        super(MultiomeLikelihood, self).__init__(batch_shape, validate_args=validate_args)
+        super(ClonalLikelihood, self).__init__(batch_shape, validate_args=validate_args)
 
 
     def log_prob(self, inp):
+        dr_lk = 0
+        baf_lk = 0
+        vaf_lk = 0
         
-        cov_atac_lk = 0
-        exp_rna_lk = 0
-        baf_atac_lk = 0
-        baf_rna_lk = 0
-        
-        
-        if self.cov_atac_mu is not None:
-            mean = self.purity * self.cov_atac_mu * (self.tot[self.x]) + (1 - self.purity) * self.cov_atac_mu * 2
-            if self.atak_lk == "NB":
-                cov_atac_lk = dist.NegativeBinomial(mean, cov_atac_overdispersion[x]).log_prob(
-                    inp["cov_atac"]
-                    )
-            else:
-                cov_atac_lk = dist.Poisson(mean).log_prob(
-                                inp["cov_atac"]
-                               )
-        if self.exp_rna_mu is not None:
-            mean = self.purity * self.exp_rna_mu[self.tot[self.x] - 1] + (1 - self.purity) * self.exp_rna_mu[1]
-            
-            exp_rna_lk = dist.Normal(mean, self.exp_rna_sd).log_prob(
-                inp["exp_rna"]
-                )
-            
-        if  self.baf_rna_number_of_trials is not None:
-                   
+        if self.baf_n_trial is not None:
             prob_tum =  (self.minor[self.x]  / (self.Major[self.x] + self.minor[self.x]))  + 1e-6
             prob = self.purity * prob_tum + 0.5 * (1 - self.purity)
-            baf_rna_lk = dist.Beta(prob * self.baf_rna_number_of_trials, 
-                                   (1 - prob) * self.baf_rna_number_of_trials).log_prob(
-                inp["baf_rna"]
+            baf_lk = dist.Beta(prob * self.baf_n_trial, 
+                                    (1 - prob) * self.baf_n_trial).log_prob(
+                inp["baf"]
                 )
-
-
-        
-        if  self.baf_atac_number_of_trials is not None:
-
-            prob_tum =  (self.minor[self.x]  / (self.Major[self.x] + self.minor[self.x]))  + 1e-6
-            prob = self.purity * prob_tum + 0.5 * (1 - self.purity)
-            baf_atac_lk = dist.Beta(prob * self.baf_atac_number_of_trials, 
-                                    (1 - prob) * self.baf_atac_number_of_trials).log_prob(
-                inp["baf_atac"]
+                                    
+        if self.dr_n_trial is not None:
+            dr = (self.minor[self.x] / (self.Major[self.x] + self.minor[self.x]))
+            dr_lk = dist.Gamma(dr * torch.sqrt(self.dr_n_trial) + 1, 
+                                    1/torch.sqrt(self.dr_n_trial)).log_prob(
+                inp["dr"]
                 )
-
-        tot_lk = self.scaling_factors[0] * cov_atac_lk +  self.scaling_factors[1] * exp_rna_lk +  self.scaling_factors[2] * baf_rna_lk +  self.scaling_factors[3] * baf_atac_lk
         
+        if self.vaf_n_trial is not None:
+            pass
+        
+        tot_lk = self.scaling_factors[0] * baf_lk + self.scaling_factors[1] * dr_lk        
         return(tot_lk)
