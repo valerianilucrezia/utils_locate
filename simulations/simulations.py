@@ -287,41 +287,41 @@ def vaf_subclonal(seg, mix_prop, peaks, tail_prop = 0.250):
     return nv_subcl, dp_subcl, tail_nv_1, dp_tail_1[0:len(tail_1)], tail_nv_2, dp_tail_2[0:len(tail_2)]
 
 
-def simulate_SNVs_subclonal(seg):
-    nvaf = int(seg.SNV)
-    ccf = seg.ccf
-    purity = seg.purity
+# def simulate_SNVs_subclonal(seg):
+#     nvaf = int(seg.SNV)
+#     ccf = seg.ccf
+#     purity = seg.purity
       
-    ks = f'{seg.Major_1}:{seg.minor_1}-{seg.Major_2}:{seg.minor_2}'
-    tsv = f'/Users/lucreziavaleriani/Desktop/MultiSegmenter/sub_clonal_peaks/{ks}/{ccf}-{purity}_peaks.tsv'
-    df = pd.read_csv(tsv, sep = '\t')
-    model = random.choice(list(set(df.model_id)))
-    peaks_df = df.loc[df['model_id'] == model]
-    peaks = list(peaks_df.peak)
+#     ks = f'{seg.Major_1}:{seg.minor_1}-{seg.Major_2}:{seg.minor_2}'
+#     tsv = f'/Users/lucreziavaleriani/Desktop/MultiSegmenter/sub_clonal_peaks/{ks}/{ccf}-{purity}_peaks.tsv'
+#     df = pd.read_csv(tsv, sep = '\t')
+#     model = random.choice(list(set(df.model_id)))
+#     peaks_df = df.loc[df['model_id'] == model]
+#     peaks = list(peaks_df.peak)
     
-    mix_prop =   np.random.uniform(size = len(peaks))
-    mix_prop =  mix_prop / sum(mix_prop)
+#     mix_prop =   np.random.uniform(size = len(peaks))
+#     mix_prop =  mix_prop / sum(mix_prop)
     
-    nv_subcl, dp_subcl, tail_nv_1, dp_tail_1, tail_nv_2, dp_tail_2 = vaf_subclonal(seg, mix_prop, peaks)
-    nv = np.concatenate([nv_subcl,tail_nv_1,tail_nv_2]) 
-    dp = np.concatenate([dp_subcl,dp_tail_1,dp_tail_2])
+#     nv_subcl, dp_subcl, tail_nv_1, dp_tail_1, tail_nv_2, dp_tail_2 = vaf_subclonal(seg, mix_prop, peaks)
+#     nv = np.concatenate([nv_subcl,tail_nv_1,tail_nv_2]) 
+#     dp = np.concatenate([dp_subcl,dp_tail_1,dp_tail_2])
     
-    pos = np.random.randint(seg.start, seg.end, nv.shape[0])
+#     pos = np.random.randint(seg.start, seg.end, nv.shape[0])
     
-    pks = list(set(peaks))
-    df = pd.DataFrame({'segID':[seg.id for _ in range(nv.shape[0])],
-                       'pos':pos,
-                       'nv':nv,
-                       'coverage':dp,
-                       'vaf':np.divide(nv, dp), 
-                       'CN_1':[f'{int(seg.Major_1)}:{int(seg.minor_1)}' for _ in range(nv.shape[0])],
-                       'CN_2':[f'{int(seg.Major_2)}:{int(seg.minor_2)}' for _ in range(nv.shape[0])],
-                       'ccf':[ccf for _ in range(nv.shape[0])],
-                       'purity':[purity for _ in range(nv.shape[0])],
-                       'true_peaks':[pks for _ in range(nv.shape[0])],
-                       'model':[model for _ in range(nv.shape[0])]
-                       })
-    return df
+#     pks = list(set(peaks))
+#     df = pd.DataFrame({'segID':[seg.id for _ in range(nv.shape[0])],
+#                        'pos':pos,
+#                        'nv':nv,
+#                        'coverage':dp,
+#                        'vaf':np.divide(nv, dp), 
+#                        'CN_1':[f'{int(seg.Major_1)}:{int(seg.minor_1)}' for _ in range(nv.shape[0])],
+#                        'CN_2':[f'{int(seg.Major_2)}:{int(seg.minor_2)}' for _ in range(nv.shape[0])],
+#                        'ccf':[ccf for _ in range(nv.shape[0])],
+#                        'purity':[purity for _ in range(nv.shape[0])],
+#                        'true_peaks':[pks for _ in range(nv.shape[0])],
+#                        'model':[model for _ in range(nv.shape[0])]
+#                        })
+#     return df
 
 
 
@@ -331,7 +331,6 @@ def simulate_data(segs):
     SNV = pd.DataFrame()
     SNP = pd.DataFrame()
     for _, row in segs.iterrows():
-        print(row.type)
         if row.type == 'clonal':
             snp = simulate_SNPs_clonal(row)
             snv = simulate_SNVs_clonal(row)
@@ -348,17 +347,17 @@ def simulate_data(segs):
     return SNP, SNV
   
   
-res_path = '/Users/lucreziavaleriani/Desktop/simulations/subclonal_w_tail'
-for s in range(20):
-    print(s)
-    segs = simulate_segment(coverage = 100, w = 1, dt = 10)
-    SNP, SNV = simulate_data(segs)
-    print('\t', segs)
+# res_path = '/Users/lucreziavaleriani/Desktop/simulations/subclonal_w_tail'
+# for s in range(20):
+#     print(s)
+#     segs = simulate_segment(coverage = 100, w = 1, dt = 10)
+#     SNP, SNV = simulate_data(segs)
+#     print('\t', segs)
     
-    os.makedirs(f"{res_path}/sim_{s}/", exist_ok=True)
+#     os.makedirs(f"{res_path}/sim_{s}/", exist_ok=True)
     
-    segs.to_csv(f"{res_path}/sim_{s}/{s}_segs.tsv", sep = '\t')
-    SNP.to_csv(f"{res_path}/sim_{s}/{s}_snp_sim.tsv", sep = "\t")
-    SNV.to_csv(f"{res_path}/sim_{s}/{s}_snv_sim.tsv", sep = "\t")
+#     segs.to_csv(f"{res_path}/sim_{s}/{s}_segs.tsv", sep = '\t')
+#     SNP.to_csv(f"{res_path}/sim_{s}/{s}_snp_sim.tsv", sep = "\t")
+#     SNV.to_csv(f"{res_path}/sim_{s}/{s}_snv_sim.tsv", sep = "\t")
     
     

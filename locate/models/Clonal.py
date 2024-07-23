@@ -37,13 +37,12 @@ class Clonal(Model):
     # parameters of the HMM + other stuff specific to CNA calling
 
     params = {'jumping_prob' : 1e-2,                                              
-              'init_probs': torch.tensor([0.2, 0.3, 0.3, 0.1, 0.1]), 
+              'init_probs': torch.tensor([0.1, 0.1, 0.1, 0.1, 0.1]), 
               'hidden_dim': 3, 
               "CUDA" : False, 
               "prior_ploidy" : 2, 
-              "prior_purity" : 1, 
+              "prior_purity" : 0.9, 
               "fix_purity" : True, 
-              "N_bins" : 3000, 
               "scaling_factors" : torch.tensor([1.,1.,1.,1.]),
               "allele_specific": True}
     
@@ -73,6 +72,7 @@ class Clonal(Model):
                 "probs_x",
                 dist.Dirichlet((1 - self._params["jumping_prob"]) * torch.eye(x.shape[0]) + self._params["jumping_prob"]).to_event(1),
             )
+            #print(probs_x)
             
         else:
             probs_x = pyro.sample(
@@ -116,6 +116,7 @@ class Clonal(Model):
             purity = pyro.sample("purity", dist.Uniform(0.,1.))
             
         self._params["N_bins"] = length
+        ploidy = self._params["ploidy"]
         
         with pyro.plate("sequences", n_sequences):
             init_logits = self._params["init_probs"].log()
@@ -134,6 +135,7 @@ class Clonal(Model):
                  vaf_n_trial = vaf_n_trial,
                  scaling_factors = self._params["scaling_factors"],
                  purity = purity, 
+                 ploidy = ploidy,
                  batch_shape = [x.shape[0], length]
                 ).to_event(1)
 
@@ -162,7 +164,7 @@ class Clonal(Model):
     # Model 2 is the same as model 1 but with enumeration, 
     # is it used to get MAP estimates of the states, 
     # becouse Pyro is a MESSED UP library
-    @infer_discrete(first_available_dim=-2, temperature=0)
+    @infer_discrete(first_available_dim = -2, temperature=0)
     @config_enumerate
     def model_2(self,learned_params):
         
@@ -197,7 +199,7 @@ class Clonal(Model):
         if self._params["fix_purity"]:
             purity = self._params["prior_purity"]
         else:
-            purity =  learned_params['purity']
+            purity = learned_params['purity']
             
                 
         with pyro.plate("sequences", n_sequences, dim = -1):

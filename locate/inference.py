@@ -122,13 +122,9 @@ class LOCATE:
         num_observations = 0
         num_segments = 0
 
-        #if "data_rna" in self._model._data:
-        #    num_observations += self._model._data['data_rna'].shape[1]
-        #    num_segments += self._model._data['data_rna'].shape[0]
-
-        #if "data_atac" in self._model._data:
-        #    num_observations += self._model._data['data_atac'].shape[1]
-        #    num_segments += self._model._data['data_atac'].shape[0]
+        if "baf" in self._model._data:
+           num_observations += self._model._data['baf'].shape[1]
+           num_segments += self._model._data['baf'].shape[0] 
 
         loss = [None] * steps
 
@@ -161,6 +157,7 @@ class LOCATE:
                     conv = conv + 1
             else:
                 conv = 0
+                
         print("", flush = True)
         self._model_trained = model
         self._guide_trained = guide
