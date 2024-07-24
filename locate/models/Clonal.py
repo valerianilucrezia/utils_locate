@@ -43,11 +43,12 @@ class Clonal(Model):
               "prior_ploidy" : 2, 
               "prior_purity" : 0.9, 
               "fix_purity" : True, 
+              "fix_ploidy" : True, 
               "scaling_factors" : torch.tensor([1.,1.,1.,1.]),
               "allele_specific": True}
     
     # This has to be generalized and left empty 
-    data_name = set(['baf', 'dr', 'vaf'])
+    data_name = set(['baf', 'dr', 'dp_snp', 'vaf', 'dp'])
 
     def __init__(self, data_dict):
         self._params = self.params.copy()
@@ -72,7 +73,6 @@ class Clonal(Model):
                 "probs_x",
                 dist.Dirichlet((1 - self._params["jumping_prob"]) * torch.eye(x.shape[0]) + self._params["jumping_prob"]).to_event(1),
             )
-            #print(probs_x)
             
         else:
             probs_x = pyro.sample(
@@ -101,29 +101,35 @@ class Clonal(Model):
         else:
             dr_n_trial = None
             
-        if self._data["vaf"] is not None:
+        if self._data["vaf"] is not None and self._data["dp"] is not None:
             length, n_sequences  = self._data["vaf"].shape
             vaf_n_trial = pyro.sample(
                 "vaf_n_trial",
                 dist.Uniform(1, 10000),
-            )
+            ) 
         else:
             vaf_n_trial = None
             
         if self._params["fix_purity"]:
             purity = self._params["prior_purity"]
         else:
-            purity = pyro.sample("purity", dist.Uniform(0.,1.))
+            #purity = float(pyro.sample("purity", dist.Uniform(0.,1.)))
+            purity = pyro.sample("purity", dist.Beta(4, 2))
+            
+                    
+        if self._params["fix_ploidy"]:
+            ploidy = self._params["prior_ploidy"]
+        else:
+            ploidy = int(pyro.sample("ploidy", dist.Poisson(2)))
+            
             
         self._params["N_bins"] = length
-        ploidy = self._params["ploidy"]
         
         with pyro.plate("sequences", n_sequences):
             init_logits = self._params["init_probs"].log()
             trans_logits = probs_x.log()
             
             # the actual likelihood
-            # WARNING!!! 
             with ignore_jit_warnings():
                 obs_dist = ClonalLikelihood(
                  x = x.unsqueeze(-1),
@@ -196,10 +202,17 @@ class Clonal(Model):
         else:
             vaf_n_trial = None
             
+            
         if self._params["fix_purity"]:
             purity = self._params["prior_purity"]
         else:
             purity = learned_params['purity']
+        
+        
+        if self._params["fix_ploidy"]:
+            ploidy = self._params["prior_ploidy"]
+        else:
+            ploidy = learned_params['ploidy']
             
                 
         with pyro.plate("sequences", n_sequences, dim = -1):
@@ -211,23 +224,65 @@ class Clonal(Model):
                 )
                 x.append(x_new)
                 
-                input_tmp = SqueezableDict({k:v[t,:] for k,v in self._data.items() if v is not None})
+                #input_tmp = SqueezableDict({k:v[t,:] for k,v in self._data.items() if v is not None})
                 
                 if self._data["baf"] is not None:
-                    prob_tum =  (minor[x_new]  / (Major[x_new] + minor[x_new]))  + 1e-6
-                    prob = purity * prob_tum + 0.5 * (1 - purity)
-                    baf_lk = pyro.factor("y_baf_{}".format(t) , dist.Beta(prob * baf_n_trial, 
-                                                (1 - prob) * baf_n_trial).log_prob(self._data["baf"][t,:]))
+                    num = (purity * minor[x_new]) +  (1 - purity)
+                    den = (purity * (Major[x_new] + minor[x_new])) + (2 * (1 - purity))
+                    prob = num / den
+                    alpha = ((baf_n_trial-2) * prob + 1) / (1 - prob)
+                    baf_lk = pyro.factor("y_baf_{}".format(t) , dist.Beta(alpha, 
+                                                baf_n_trial).log_prob(self._data["baf"][t,:]))
+                    # alpha = ((self._data["dp_snp"][t,:]-2) * prob + 1) / (1 - prob)
+                    # baf_lk = dist.Beta(concentration1 = alpha, 
+                    #                     concentration0 = self._data["dp_snp"][t,:]).log_prob(
+                    #     self._data["baf"][t,:]
+                    #     )
+                    
                                            
                 if self._data["dr"] is not None:     
-                    dr = (minor[x_new]  / (Major[x_new] + minor[x_new])) 
+                    dr = ((2 * (1-purity)) + (purity * (Major[x_new] + minor[x_new]))) / ploidy
                     dr_lk = pyro.factor("y_dr_{}".format(t) , dist.Gamma(dr * torch.sqrt(dr_n_trial) + 1, 
                                 1/torch.sqrt(dr_n_trial)).log_prob(self._data["dr"][t,:]))
                 
                 if self._data["vaf"] is not None:
-                    pass
-        
+                    clonal_peaks = get_clonal_peaks(tot[x_new], Major[x_new], minor[x_new], purity)
+                    tmp_vaf_lk = []
+                    for j,cn in enumerate(clonal_peaks):
+                        tmp_peak = 0.0
+                        for i,p in enumerate(cn):
+                            bin_lk = pyro.factor(f"y_vaf_{i}_{j}".format(t), dist.Binomial(self._data["dp"][t,:], 
+                                    p).log_prob(self._data["vaf"][t,:].to(torch.int64)))
+                    #         print(bin_lk)
+                    #         tmp_peak+= (1/len(cn)) * bin_lk
+                    #     tmp_vaf_lk.append(tmp_peak)
+                    # vaf_lk = torch.cat(tmp_vaf_lk, dim=1)
+                    
             return x
-
-           
         
+        
+def get_clonal_peaks(tot, Major, minor, purity):
+    mult = []
+    for i,v in enumerate(Major):
+        m = []
+        if torch.equal(Major[i], minor[i]):
+            m.append(Major[i][0])
+        else:
+            if minor[i] != 0:
+                m.append(Major[i][0])
+                m.append(minor[i][0])
+            else:
+                m.append(Major[i][0])
+        if torch.equal(Major[i], torch.tensor([2])) and torch.equal(minor[i], torch.tensor([1])) == False:
+            m.append(torch.tensor(1))
+        mult.append(m)
+
+    clonal_peaks = []
+    for i,c in enumerate(mult):
+        p = []
+        for m in c:
+            cp = m * purity / (tot[i] * purity + 2 * (1 - purity))
+            p.append(cp)
+        clonal_peaks.append(p)
+        
+    return clonal_peaks

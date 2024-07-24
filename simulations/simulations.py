@@ -19,7 +19,7 @@ def check_sum_karyo(k1,k2):
   
 
 # size chr21
-def simulate_segment(genome_size = 50000000, 
+def simulate_segment(genome_size = 20000000, 
                     segments = 5, 
                     coverage = 50,
                     mu = 0.000003,
@@ -80,8 +80,8 @@ def simulate_segment(genome_size = 50000000,
           cna_copy_number_major_2 = int(copy_number_2.split(':')[0])
           cna_copy_number_minor_2 = int(copy_number_2.split(':')[1])
         
-        nSNP = int((cna_end - cna_start)/3000) #heterozygous
-        nSNV = np.random.poisson(size = 1, lam = int((cna_end - cna_start) * mu * w * dt))[0]
+        nSNP = int((cna_end - cna_start)/15000) #heterozygous
+        nSNV = nSNP #np.random.poisson(size = 1, lam = int((cna_end - cna_start) * mu * w * dt))[0]
         
         start.append(cna_start)
         end.append(cna_end)
@@ -114,7 +114,9 @@ def simulate_segment(genome_size = 50000000,
     return df
 
 def simulate_SNVs_clonal(seg, tail_prop = 0.250):
-    nvaf = int(seg.SNV)
+    or_nvaf = int(seg.SNV)
+    ntail = round(or_nvaf * tail_prop)
+    nvaf = or_nvaf - ntail
     
     peaks = get_clonal_peaks(seg.Major_1, seg.minor_1, purity =  seg.purity)
     mix_prop = np.random.uniform(low = 0, high = 1, size = len(peaks)) 
@@ -125,8 +127,6 @@ def simulate_SNVs_clonal(seg, tail_prop = 0.250):
     dp = np.random.poisson(lam = seg.coverage, size = nvaf)
     nv = np.random.binomial(n = seg.coverage, p = peaks_of_mutations, size = nvaf)
     vaf = nv/dp
-    
-    ntail = round(nvaf * tail_prop)
     
     tail = my_pareto_betabin(ntail)
     dp_tail = np.random.poisson(lam = seg.coverage, size = tail.shape[0])
