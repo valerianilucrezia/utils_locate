@@ -1,0 +1,8 @@
+fig, axs = plt.subplots(3, figsize=(10, 5))
+axs[0].plot(range(len(data_input['baf'])), data_input['baf'], 'o', markersize = 1)
+axs[0].set_ylim(0,1)
+axs[0].set_ylabel('BAF')
+axs[1].plot(range(len(data_input['dr'])), data_input['dr'], 'o', markersize = 1)
+axs[1].set_ylabel('DR')
+# axs[2].plot(range(len(data_input['vaf'])), data_input['dr'], 'o', markersize = 1)
+# axs[2].set_ylabel('VAF')
