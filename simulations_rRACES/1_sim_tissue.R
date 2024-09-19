@@ -2,15 +2,23 @@ library(rRACES)
 library(dplyr)
 library(ggplot2)
 library(patchwork)
+library(optparse)
 
-dir_orfeo <- "/orfeo/LTS/LADE/LT_storage/lvaleriani/CNA/segmentation/sim_data_races/simulate_data/"
-setwd(dir_orfeo)
+option_list = list(
+  make_option(c("-o", "--outdir"), type="character", default="", 
+              help="simulation path", metavar="character"),
+  
+  make_option(c("-t", "--type"), type="character", default="clonal", 
+              help="type of simulation", metavar="character")
+); 
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
 
-type <- 'clonal'
 
+# Shoose which type of tumor you want to simulate between clonal and sub-clonal
+# For now it works ONLY clonal
 if (type == 'clonal'){ 
-  name_sim <- type
-  res_dir <- paste0("/orfeo/LTS/LADE/LT_storage/lvaleriani/CNA/segmentation/sim_data_races/data_races/", name_sim, '/')
+  res_dir <- paste0(opt$outdir, opt$type, '/')
   dir.create(res_dir, recursive = T, showWarnings = F)
   
   # Simulate tissue ####
@@ -35,14 +43,13 @@ if (type == 'clonal'){
   muller <- plot_muller(sim)
   tissue <- plot_tissue(sim)
   sim_plot <-  muller + tissue
-  ggsave(paste0(res_dir, 'sim.png'), sim_plot)
+  ggsave(filename = paste0(res_dir, 'sim.png'), plot = sim_plot)
   
   forest <- sim$get_samples_forest()
   forest$save(paste0(res_dir, "samples_forest.sff"))
 
 } else if (type == 'sub-clonal'){
-  name_sim <- type
-  res_dir <- paste0("/orfeo/LTS/LADE/LT_storage/lvaleriani/CNA/segmentation/sim_data_races/data_races/", name_sim, '/')
+  res_dir <- paste0(opt$outdir, opt$type, '/')
   dir.create(res_dir, recursive = T, showWarnings = F)
   
   # Simulate tissue ####
