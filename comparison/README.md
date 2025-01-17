@@ -57,3 +57,9 @@ Run [HATCHET](#hatchet) and [Battenberg](#battenberg) copy number caller on:
 ## Output
 - A folder for each sample (Illumina and Nanopore) with the output of both HATCHET and Battenberg.
 - Scripts for the reprodubility of the results.
+
+## Reference Files
+- Nanopore: `/orfeo/LTS/LADE/LT_storage/lvaleriani/CNA/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna`
+- Illumina: `/orfeo/LTS/CDSLab/LT_storage/ref_genomes/Homo_sapiens/GATK/GRCh38/Sequence/WholeGenomeFasta/Homo_sapiens_assembly38.fasta`
+
+
