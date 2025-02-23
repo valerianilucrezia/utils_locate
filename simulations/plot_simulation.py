@@ -6,8 +6,6 @@ import pickle
 import torch
 import os
 
-from simulations import simulate_segment, simulate_SNVs, simulate_SNPs
-
 def simulate_data():
     segs = simulate_segment()
 
@@ -26,7 +24,7 @@ def simulate_data():
         
     return segs, SNV, SNP
     
-def plot_data(SNP, SNV, path, save = False):
+def plot_data(snp, snv, path, save = False):
     sns.set_theme(style="white", font_scale=1.5)
     fig, axes = plt.subplots(2, 3, figsize=(30, 18))
 
