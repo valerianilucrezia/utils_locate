@@ -4,7 +4,7 @@ library(patchwork)
 library("optparse")
 
 
-option_list = list(make_option(c("-s", "--simulation"), type="character", default="sim_3", 
+option_list = list(make_option(c("-s", "--simulation"), type="character", default="sim_1", 
               help="simulation ID", metavar="character")); 
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);

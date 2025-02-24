@@ -47,4 +47,3 @@ get_bp <- function(cna_id){
   return(bps)
 }
 
-

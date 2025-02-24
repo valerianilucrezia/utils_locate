@@ -1,5 +1,16 @@
 col_seg  <- c('lightsteelblue', 'rosybrown2', 'wheat2', 'snow3','darkseagreen')
 
+source('~/Documents/GitHub/utils_locate/simulations_rRACES/utils_plot.R')
+plot_allelic_fragmentation <- function(events){
+  data <- absolute_to_relative_coordinates(events %>% mutate(chr = paste0('chr', chr)))
+  plt <- blank_genome(chromosomes = unique(data$chr)) +
+    geom_segment(data = data, aes(x = begin, xend = end, y = major+0.03), col = '#01796F', linewidth = 1.5) +
+    geom_segment(data = data, aes(x = begin, xend = end, y = minor-0.03), col = 'goldenrod', linewidth = 1.5) +
+    ylab('CN')
+  return(plt)
+}
+
+
 plot_hist_BAF <- function(germline, cut = 0.99){
   plt <- germline %>% 
     filter(VAF.tumour < cut)  %>% 
