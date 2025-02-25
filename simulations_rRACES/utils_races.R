@@ -3,9 +3,9 @@ seq_to_long_cna <- function(seq_results) {
   sample_names <- strsplit(colnames(seq_results)[grepl(".VAF", colnames(seq_results), fixed = TRUE)], ".VAF") %>% unlist()
   
   seq_df <- lapply(sample_names, function(sn) {
-    cc <- c("chr", "chr_pos", "ref", "alt", "causes", "classes", 'cna_id', colnames(seq_results)[grepl(paste0(sn, "."), colnames(seq_results), fixed = TRUE)])
+    cc <- c("chr", "chr_pos", "ref", "alt", "causes", "classes", 'cna_id', 'cna', colnames(seq_results)[grepl(paste0(sn, "."), colnames(seq_results), fixed = TRUE)])
     seq_results[, cc] %>%
-      `colnames<-`(c("chr", "chr_pos", "ref", "alt", "causes", "classes", "cna_id", "occurences", "coverage", "VAF")) %>%
+      `colnames<-`(c("chr", "chr_pos", "ref", "alt", "causes", "classes", "cna_id", 'cna', "occurences", "coverage", "VAF")) %>%
       dplyr::mutate(sample_name = sn)
   }) %>% do.call("bind_rows", .)
   
@@ -47,3 +47,34 @@ get_bp <- function(cna_id){
   return(bps)
 }
 
+
+get_sample_info <- function(sim, forest){
+  info = sim$get_samples_info()
+  nodes = forest$get_nodes()
+  clones = nodes %>% 
+    dplyr::filter(!is.na(sample)) %>% 
+    dplyr::group_by(sample, mutant) %>% 
+    dplyr::pull(mutant) %>% 
+    unique()
+  clones_of_origin = nodes %>%
+    dplyr::filter(!is.na(sample)) %>% 
+    dplyr::group_by(sample, mutant) %>% 
+    # dplyr::mutate(mutant = gsub(" ", "_", mutant)) %>% 
+    dplyr::count(mutant) %>% 
+    tidyr::pivot_wider(values_from = n, names_from = mutant, values_fill = 0) %>% 
+    dplyr::rowwise() %>% 
+    dplyr::mutate(sample_type = sum(c_across(clones) == 0)) %>% 
+    dplyr::mutate(sample_type = ifelse(sample_type == (length(clones)-1), "Monoclonal", "Polyclonal"))
+  
+  info = dplyr::full_join(info, clones_of_origin, by = join_by("name" == "sample"))
+  
+  info = info %>% 
+    dplyr::group_by(time) %>% 
+    dplyr::group_split() 
+  info = lapply(1:length(info), function(x) {
+    oo = info[[x]] %>% 
+      dplyr::mutate(t = paste0("t~", x, "~"))
+  }) %>% 
+    bind_rows() %>% select(-id, -xmin, -xmax, -ymin, -ymax, -tumour_cells_in_bbox, -t) %>%
+    mutate(across(starts_with("Clone"), ~ . / tumour_cells, .names = "CFF_{.col}"))
+}

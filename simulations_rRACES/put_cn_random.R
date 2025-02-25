@@ -1,5 +1,14 @@
 library(rRACES)
 library(dplyr)
+event_list <- list('1:0' = 1,
+                   '2:1' = 1,
+                   '2:2' = 2,
+                   '2:0' = 2,
+                   '3:1' = 2,
+                   '3:0' = 3,
+                   '3:2' = 3,
+                   '3:3' = 4)
+
 
 get_cna_event = function(nE, Sizes, Start, End, Events){
   Len = End - Start
@@ -34,7 +43,9 @@ get_cna_event = function(nE, Sizes, Start, End, Events){
     tmp = tmp + all_len[seg] + 1
   }
 
-  all_event = dplyr::tibble(start = start_pos, end = end_pos, len = all_len)
+  all_event = dplyr::tibble(start = start_pos, 
+                            end = end_pos, 
+                            len = all_len)
   
   idx_event = which(all_len != lenNorm)
   pos_event = start_pos[idx_event]
@@ -42,11 +53,15 @@ get_cna_event = function(nE, Sizes, Start, End, Events){
   
   current_ev = sample(Events, size = nE, replace = F)
   
-  event_df = dplyr::tibble(events = current_ev, length = len_event, start = pos_event) %>%
-    mutate(end = start + length) %>% select(events, start, end , length)
+  event_df = dplyr::tibble(events = current_ev, 
+                           length = len_event, 
+                           start = pos_event) %>%
+              mutate(end = start + length) %>% 
+              select(events, start, end , length) %>% 
+              mutate(nAdd = event_list[current_ev] %>% unlist())
   
   
-  CNAs = list(SNV("22", 11510212, "C"))
+  CNAs = list()
   
   nAllele = 2
   for (event in seq(1, nE)){
