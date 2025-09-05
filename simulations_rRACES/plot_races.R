@@ -8,7 +8,7 @@ col_seg  <- list('1:1'='indianred3',
                  '3:2'='darkslategray4',
                  '3:3'='tan3')
 
-source('~/Documents/GitHub/utils_locate/simulations_rRACES/utils_plot.R')
+source('../utils_plot.R')
 plot_allelic_fragmentation <- function(events, name = ''){
   data <- absolute_to_relative_coordinates(events %>% mutate(chr = paste0('chr', chr)))
   plt <- blank_genome(chromosomes = unique(data$chr)) +
@@ -36,11 +36,11 @@ plot_hist_BAF <- function(germline, cut = 0.99){
   plt <- germline %>% 
     filter(VAF.tumour < cut)  %>% 
     ggplot() + 
-    geom_histogram(aes(x = VAF.tumour, fill = cna.tumour), binwidth = 0.01) +
+    geom_histogram(aes(x = VAF.tumour, fill = CN.tumour), binwidth = 0.01) +
     scale_fill_manual('CN', values = col_seg) + 
     xlab('BAF') +
     xlim(-0.01, 1.01) +
-    facet_grid(cna_id.tumour~sample_name.tumour , scales = 'free') + 
+    facet_grid(CN.tumour~sample_name.tumour , scales = 'free') + 
     theme_bw()
   return(plt)
 }
@@ -49,10 +49,10 @@ plot_hist_VAF <- function(somatic, cut = 0){
   plt <- somatic %>% 
     filter(VAF >= cut) %>% 
     ggplot() + 
-    geom_histogram(aes(x = VAF, fill = cna), binwidth = 0.01) +
+    geom_histogram(aes(x = VAF, fill = CN), binwidth = 0.01) +
     scale_fill_manual('CN', values = col_seg) + 
     xlim(-0.01, 1.01) +
-    facet_grid(cna_id ~ sample_name, scales = 'free') + 
+    facet_grid(CN ~ sample_name, scales = 'free') + 
     theme_bw() 
   
   return(plt)
@@ -61,16 +61,17 @@ plot_hist_VAF <- function(somatic, cut = 0){
 
 plot_gw <- function(germline, somatic, bp, info = ''){
   sample <- somatic %>% pull(sample_name) %>% unique()
-  plt <-     ggplot() +
-    geom_point(aes(x = germline$from.tumour, y = germline$DR, color = germline$cna.tumour), alpha = 0.5, size = 0.1) + 
+  plt <- ggplot() +
+    geom_point(aes(x = germline$from.tumour, y = germline$DR, color = germline$CN.tumour), alpha = 0.5, size = 0.1) + 
     geom_vline(aes(xintercept = bp), color = 'gray') +
     scale_color_manual('CN', values = col_seg) + 
     ylab('DR') + 
     xlab('pos') + 
     theme_bw() +
+    ylim(-1,6) +
     
     ggplot() +
-    geom_point(aes(x = germline$from.tumour, y = germline$VAF.tumour, color = germline$cna.tumour), alpha = 0.5, size = 0.1) + 
+    geom_point(aes(x = germline$from.tumour, y = germline$VAF.tumour, color = germline$CN.tumour), alpha = 0.5, size = 0.1) + 
     geom_vline(aes(xintercept = bp), color = 'gray') +
     scale_color_manual('CN', values = col_seg) + 
     xlab('pos') + 
@@ -80,14 +81,14 @@ plot_gw <- function(germline, somatic, bp, info = ''){
     
     
     ggplot() +
-    geom_point(aes(x = somatic$from, y = somatic$VAF, color = somatic$cna), alpha = 0.5, size = 0.1) + 
+    geom_point(aes(x = somatic$from, y = somatic$VAF, color = somatic$CN), alpha = 0.5, size = 0.1) + 
     geom_vline(aes(xintercept = bp), color = 'gray') +
     scale_color_manual('CN', values = col_seg) + 
     ylim(0,1) +
     xlab('pos') + 
     ylab('VAF') + 
     theme_bw()  +
-    plot_layout(nrow = 3, guides = 'collect') + plot_annotation(title = info) & theme(legend.position = 'bottom')
+    plot_layout(nrow = 3, guides = 'collect') + plot_annotation(title = info) & theme(legend.position = 'none')
   return(plt)
 }
 

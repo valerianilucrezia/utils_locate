@@ -1,4 +1,4 @@
-library(rRACES)
+library(ProCESS)
 library(dplyr)
 library(ggplot2)
 library(patchwork)
@@ -6,13 +6,13 @@ library(optparse)
 
 
 option_list = list(
-  make_option(c("-o", "--outdir"), type="character", default="/Users/lucreziavaleriani/Documents/GitHub/utils_locate/simulations_rRACES/results", 
+  make_option(c("-o", "--outdir"), type="character", default="/orfeo/cephfs/scratch/area/lvaleriani/utils_locate/simulations_rRACES/out", 
               help="simulation path", metavar="character"),
   
-  make_option(c("-t", "--type"), type="character", default="sub-clonal", 
+  make_option(c("-t", "--type"), type="character", default="clonal", 
               help="type of simulation", metavar="character")
   
-); 
+)
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
@@ -21,13 +21,13 @@ opt = parse_args(opt_parser);
 # For now it works ONLY clonal
 if ( opt$type == 'clonal'){ 
   
-  res_dir <- paste0(opt$outdir, '/', opt$type, '/')
+  res_dir <- file.path(opt$outdir, opt$type)
   dir.create(res_dir, recursive = T, showWarnings = F)
   
   setwd(res_dir)
   
   # Simulate tissue ####
-  sim <- SpatialSimulation(name =  opt$type, seed = 12345, save_snapshots = T)
+  sim <- TissueSimulation(name = opt$type, seed = 12345, save_snapshots = T)
   sim$history_delta <- 1
   sim$death_activation_level <- 50
   
@@ -53,13 +53,12 @@ if ( opt$type == 'clonal'){
   
   muller <- plot_muller(sim)
   tissue <- plot_tissue(sim)
-  sim_plot <-  muller + tissue
-  ggsave(filename = paste0(res_dir, 'sim.png'), plot = sim_plot)
+  forest <- sim$get_sample_forest()
+  forest$save(paste0(res_dir, "/samples_forest.sff"))
   
-  forest <- sim$get_samples_forest()
-  plot_forest(forest)
-  
-  forest$save(paste0(res_dir, "samples_forest.sff"))
+  sim_plot <-  muller + tissue + plot_forest(forest) %>% annotate_forest(forest) & theme_minimal() & theme(legend.position = 'none')
+  ggsave(filename = file.path(res_dir, '/sim.png'), plot = sim_plot, width = 8, height = 3.5, units = 'in', dpi = 200)
+  ggsave(filename = file.path(res_dir, '/sim.pdf'), plot = sim_plot, width = 8, height = 3.5, units = 'in', dpi = 400)
 
 } else if (type == 'sub-clonal'){
   res_dir <- paste0(opt$outdir, '/', opt$type, '/')

@@ -3,7 +3,7 @@ library(ggplot2)
 library(patchwork)
 library("optparse")
 
-
+setwd('/orfeo/cephfs/scratch/area/lvaleriani/utils_locate/simulations_rRACES/out')
 option_list = list(make_option(c("-s", "--simulation"), type="character", default="sim_1", 
               help="simulation ID", metavar="character"),
               make_option(c("-t", "--type"), type="character", default="clonal", 
@@ -12,12 +12,11 @@ option_list = list(make_option(c("-s", "--simulation"), type="character", defaul
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
-dir <- paste0('/Users/lucreziavaleriani/Documents/GitHub/utils_locate/simulations_rRACES/results/', opt$type, '/', opt$simulation, '/')
+dir <- paste0('/orfeo/cephfs/scratch/area/lvaleriani/utils_locate/simulations_rRACES/out/', opt$type, '/', opt$simulation, '/')
 
-source('/Users/lucreziavaleriani/Documents/GitHub/utils_locate/simulations_rRACES/utils_smooth.R')
-source('/Users/lucreziavaleriani/Documents/GitHub/utils_locate/simulations_rRACES/plot_races.R')
-source('/Users/lucreziavaleriani/Documents/GitHub/utils_locate/simulations_rRACES/utils_races.R')
-
+source('../utils_smooth.R')
+source('../plot_races.R')
+source('../utils_races.R')
 
 combinations <- list.dirs(dir, full.names = F)
 
@@ -44,21 +43,17 @@ if (opt$type == 'clonal'){
         vaf_smooth <- mirro_and_smoothing(sv = snv, 
                                     sp = filt_snp, 
                                     save = FALSE)
-        #saveRDS(file = paste0(res_dir, '/mirr_smooth_snv.RDS'), object = vaf_smooth)
-        #write.csv(vaf_smooth, file = paste0(res_dir, '/mirr_smooth_snv.csv'), quote = F, row.names = F)
+        saveRDS(file = paste0(res_dir, '/mirr_smooth_snv.RDS'), object = vaf_smooth)
+        write.csv(vaf_smooth, file = paste0(res_dir, '/mirr_smooth_snv.csv'), quote = F, row.names = F)
   
         
-        plt <- patchwork::wrap_plots(plot_gw(filt_snp, snv, bps), 
-                                     #plt_smooth_vaf_median(vaf_smooth, bps),
+        plt <- patchwork::wrap_plots(plot_gw(germline = filt_snp, somatic = snv, bp = bps), 
                                      plot_hist_BAF(filt_snp), 
                                      plot_hist_VAF(snv), 
                                      design = 'AA\nCD', 
                                      guides = 'collect'
                                     )
-        # ggsave(filename = paste0(res_dir, '/data.png'), plot = plt)
+        ggsave(filename = paste0(res_dir, '/data.png'), plot = plt, width = 10, height = 8, units = 'in', dpi = 300)
       }
   }
-} else{
-  
 }
-

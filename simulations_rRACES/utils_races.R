@@ -3,9 +3,9 @@ seq_to_long_cna <- function(seq_results) {
   sample_names <- strsplit(colnames(seq_results)[grepl(".VAF", colnames(seq_results), fixed = TRUE)], ".VAF") %>% unlist()
   
   seq_df <- lapply(sample_names, function(sn) {
-    cc <- c("chr", "chr_pos", "ref", "alt", "causes", "classes", 'cna_id', 'cna', colnames(seq_results)[grepl(paste0(sn, "."), colnames(seq_results), fixed = TRUE)])
+    cc <- c("chr", "chr_pos", "ref", "alt", "causes", "classes", "major", "minor", "ratio", "seg_id", "CN", colnames(seq_results)[grepl(paste0(sn, "."), colnames(seq_results), fixed = TRUE)])
     seq_results[, cc] %>%
-      `colnames<-`(c("chr", "chr_pos", "ref", "alt", "causes", "classes", "cna_id", 'cna', "occurences", "coverage", "VAF")) %>%
+      `colnames<-`(c("chr", "chr_pos", "ref", "alt", "causes", "classes", "major", "minor", "ratio", "seg_id", "CN", "occurences", "coverage", "VAF")) %>%
       dplyr::mutate(sample_name = sn)
   }) %>% do.call("bind_rows", .)
   

@@ -1,53 +1,53 @@
-library(rRACES)
+library(ProCESS)
 library(dplyr)
 library(optparse)
 library(ggplot2)
-setwd('/Users/lucreziavaleriani/Documents/GitHub/utils_locate/simulations_rRACES/results/')
+setwd('/orfeo/cephfs/scratch/area/lvaleriani/utils_locate/simulations_rRACES/out')
 
-# Source auxiliary file for creating random CN events
-source('/Users/lucreziavaleriani/Documents/GitHub/utils_locate/simulations_rRACES/put_cn_random.R')
-source('/Users/lucreziavaleriani/Documents/GitHub/utils_locate/simulations_rRACES/plot_races.R')
+source('../put_cn_random.R')
+source('../plot_races.R')
 
 option_list = list(
-  make_option(c("-o", "--outdir"), type="character", default="/Users/lucreziavaleriani/Documents/GitHub/utils_locate/simulations_rRACES/results", 
+  make_option(c("-o", "--outdir"), type="character", 
+              default="/orfeo/cephfs/scratch/area/lvaleriani/utils_locate/simulations_rRACES/out", 
               help="simulation path", metavar="character"),
   
-  make_option(c("-t", "--type"), type="character", default="sub-clonal", 
+  make_option(c("-t", "--type"), type="character", default="clonal", 
               help="type of simulation", metavar="character")
   
-); 
+)
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
 
 # Define output directory
-base_dir <- paste0(opt$outdir, '/', opt$type, '/')
+base_dir <- file.path(opt$outdir, opt$type)
 
 # Set parameters for simulating CN events, for the moment only in chr22
 Nsims = seq(1, 30)                                  # how many simulations you want
-Nevents = 1:6                    # possible number of events in each simulation
-Sizes = c(1e7, 9e6, 6e6, 3e6, 1e6)                  # possible lengths of events
+Nevents = 1:6                                       # possible number of events in each simulation
+Sizes = c(1e7, 9e6, 6e6, 3e6, 1e6, 9e5, 8e5, 5e5)   # possible lengths of events
 Start = 16000000                                    # where chr22 start
 End = 51304566                                      # where chr22 end
 Events = c('2:1', '2:2', '2:0', '1:0',
            '3:0', '3:1', '3:2', '3:3')              # types of events that we are able to simulate
 
-mr_SNV = 1e-8                                    # set mutation rate for SNV
+mr_SNV = 1e-7                                  # set mutation rate for SNV
 
+sim=1
 for (sim in Nsims){
   cli::cli_text(cli::col_blue('Simulation {sim}'))
   
   name_sim <- paste0('sim_', sim)
-  res_dir <- paste0(base_dir, name_sim, '/')
+  res_dir <- file.path(base_dir, name_sim)
   dir.create(res_dir, recursive = T, showWarnings = F)
   
-  
   if (opt$type == 'clonal'){
-    m_engine <- MutationEngine(setup_code = "demo")
+    m_engine <- MutationEngine(setup_code = "demo", context_sampling = 20)
     
     Nev <- sample(Nevents, 1)  
     event <- get_cna_event(Nev, Sizes, Start, End, Events)
-    saveRDS(object = event, file = paste0(res_dir, 'original_cna_event.RDS'))
+    saveRDS(object = event, file = paste0(res_dir, '/original_cna_event.RDS'))
     
     m_engine$add_mutant(mutant_name = "Clone 1",
                         passenger_rates = c(SNV = mr_SNV,
@@ -56,24 +56,25 @@ for (sim in Nsims){
     
     m_engine$add_mutant(mutant_name = "Clone 2",
                         passenger_rates = c(SNV = mr_SNV, 
-                                            CNA = 0),
-                        drivers = list("NF2 R221*"))
+                                            CNA = 0 ),
+                        drivers = list("NF2 R8H"))
     
-    m_engine$add_exposure(c(SBS5 = 0.3, SBS3 = 0.7))
+    m_engine$add_exposure(c(SBS1 = 0.3, SBS5 = 0.7, ID1 = 1))
     
-    forest <- load_samples_forest(paste0(base_dir, "samples_forest.sff"))
+    forest <- load_sample_forest(paste0(base_dir, "/samples_forest.sff"))
     
     phylo_forest <- m_engine$place_mutations(forest, 
-                                             num_of_preneoplatic_SNVs = 800,
+                                             num_of_preneoplatic_SNVs = 100,
                                              num_of_preneoplatic_indels = 0)
+    
     # store CNAs events
     events <- phylo_forest$get_bulk_allelic_fragmentation('Sample')
-    saveRDS(object = events, file = paste0(res_dir, 'cna_event.RDS'))
+    saveRDS(object = events, file = paste0(res_dir, '/cna_event.RDS'))
     
     plot_events <- plot_allelic_fragmentation(events)
-    ggsave(filename = paste0(res_dir, "cna_events.png"), plot = plot_events, dpi = 300)
+    ggsave(filename = paste0(res_dir, "/cna_events.png"), plot = plot_events, dpi = 300)
     
-    phylo_forest$save(paste0(res_dir, "phylo_forest.sff"))
+    phylo_forest$save(paste0(res_dir, "/phylo_forest.sff"))
     
   } else if (opt$type == 'sub-clonal'){
     m_engine <- MutationEngine(setup_code = "demo")
@@ -83,7 +84,7 @@ for (sim in Nsims){
     Nev <- sample(Nevents, 1)  
     
     events_all <- get_cna_event(Nev, Sizes, Start, End, Events)
-    saveRDS(object = events_all, file = paste0(res_dir, 'original_cna_event.RDS'))
+    saveRDS(object = events_all, file = paste0(res_dir, '/original_cna_event.RDS'))
     
     N1 <- sample(Nev-1, 1)
     N2 <- Nev - N1
