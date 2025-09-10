@@ -11,10 +11,14 @@ col_seg  <- list('1:1'='indianred3',
 source('../utils_plot.R')
 plot_allelic_fragmentation <- function(events, name = ''){
   data <- absolute_to_relative_coordinates(events %>% mutate(chr = paste0('chr', chr)))
+  data <- data %>% mutate(CN = paste(major, minor, sep = ':'))
+  
   plt <- blank_genome(chromosomes = unique(data$chr)) +
-    geom_segment(data = data, aes(x = begin, xend = end, y = major+0.03), col = '#01796F', linewidth = 1.5) +
-    geom_segment(data = data, aes(x = begin, xend = end, y = minor-0.03), col = 'goldenrod', linewidth = 1.5) +
+    geom_rect(data = data, aes(xmin =begin, xmax = end, ymin = -Inf, ymax = Inf, fill = CN), alpha = .4) +
+    geom_segment(data = data, aes(x = begin, xend = end, y = major+0.03), col = 'deepskyblue4', linewidth = 1.5) +
+    geom_segment(data = data, aes(x = begin, xend = end, y = minor-0.03), col = 'indianred3', linewidth = 1.5) +
     ggtitle(name) + 
+    scale_fill_manual(values = col_seg) + 
     ylab('CN')
   return(plt)
 }
@@ -68,7 +72,8 @@ plot_gw <- function(germline, somatic, bp, info = ''){
     ylab('DR') + 
     xlab('pos') + 
     theme_bw() +
-    ylim(-1,6) +
+    scale_x_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale())) + 
+    ylim(0,3) +
     
     ggplot() +
     geom_point(aes(x = germline$from.tumour, y = germline$VAF.tumour, color = germline$CN.tumour), alpha = 0.5, size = 0.1) + 
@@ -77,6 +82,7 @@ plot_gw <- function(germline, somatic, bp, info = ''){
     xlab('pos') + 
     ylim(0,1) +
     ylab('BAF') + 
+    scale_x_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale())) + 
     theme_bw() +
     
     
@@ -88,6 +94,7 @@ plot_gw <- function(germline, somatic, bp, info = ''){
     xlab('pos') + 
     ylab('VAF') + 
     theme_bw()  +
+    scale_x_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale())) + 
     plot_layout(nrow = 3, guides = 'collect') + plot_annotation(title = info) & theme(legend.position = 'none')
   return(plt)
 }

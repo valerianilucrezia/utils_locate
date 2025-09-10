@@ -51,12 +51,16 @@ if ( opt$type == 'clonal'){
   bbox <- sim$search_sample(c("Clone 2" = 1000), 50, 50)
   sim$sample_cells("Sample", bbox$lower_corner, bbox$upper_corner)
   
-  muller <- plot_muller(sim)
-  tissue <- plot_tissue(sim)
+  col = list('Clone 1' = 'darkseagreen','Clone 2' = 'cadetblue', `Wild-type ` = 'white' )
+  muller <- plot_muller(sim, color_map = col)
+  tissue <- plot_tissue(sim, color_map = col) +
+    geom_rect(xmin = bbox$lower_corner[1], xmax = bbox$upper_corner[1],
+              ymin = bbox$lower_corner[2], ymax = bbox$upper_corner[2],
+              fill = NA, color = "black")
   forest <- sim$get_sample_forest()
-  forest$save(paste0(res_dir, "/samples_forest.sff"))
+  #forest$save(paste0(res_dir, "/samples_forest.sff"))
   
-  sim_plot <-  muller + tissue + plot_forest(forest) %>% annotate_forest(forest) & theme_minimal() & theme(legend.position = 'none')
+  sim_plot <-  muller + tissue + plot_forest(forest, color_map = col) %>% annotate_forest(forest) & theme_minimal() & theme(legend.position = 'none')
   ggsave(filename = file.path(res_dir, '/sim.png'), plot = sim_plot, width = 8, height = 3.5, units = 'in', dpi = 200)
   ggsave(filename = file.path(res_dir, '/sim.pdf'), plot = sim_plot, width = 8, height = 3.5, units = 'in', dpi = 400)
 

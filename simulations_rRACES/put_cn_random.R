@@ -10,27 +10,28 @@ event_list <- list('1:0' = 1,
                    '3:3' = 4)
 
 
-get_cna_event = function(nE, Sizes, Start, End, Events){
+get_cna_event = function(nE, Sizes, Start, End, Events, Chr="1"){
   Len = End - Start
   
-  full_len = 0 
-  while (full_len < Len){
-    lenghts = sample(Sizes, size = nE, replace = T)
+  full_len = Len 
+  while (full_len >= Len){
+    lenghts = sample(rep(Sizes, nE), size = nE, replace = T)
     full_len = sum(lenghts)
-    if (full_len < Len){
-      break
-    }
+    # if (full_len > Len){
+    #   break
+    # }
   }
   
   # define start pos of segments
-  missing_pos = Len - full_len - 150
+  missing_pos = Len - full_len - 500
   normal_seg = c(2,3,4)
   nNorm = sample(normal_seg, 1)
   lenNorm = round(missing_pos/nNorm)
   
   all_len = c(rep(lenNorm, nNorm), lenghts)
   all_len = sample(all_len)
-
+  
+  print(sum(all_len) < Len)
   
   tmp = Start
   start_pos = c()
@@ -51,7 +52,7 @@ get_cna_event = function(nE, Sizes, Start, End, Events){
   pos_event = start_pos[idx_event]
   len_event = all_len[idx_event]
   
-  current_ev = sample(Events, size = nE, replace = F)
+  current_ev = sample(rep(Events, nE), size = nE)
   
   event_df = dplyr::tibble(events = current_ev, 
                            length = len_event, 
@@ -70,56 +71,55 @@ get_cna_event = function(nE, Sizes, Start, End, Events){
     size = tmp_event$length
     
     if (CN == '1:0') {
-      CNAs = append(CNAs, CNA(type = "D", "22", chr_pos = pos_event[event], len = size))
+      CNAs = append(CNAs, CNA(type = "D", Chr, chr_pos = pos_event[event], len = size))
       
     } else if (CN == '2:1'){
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
   
     } else if (CN == '2:2'){
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
       
-      CNAs = append(CNAs,CNA(type = "A", "22", chr_pos = pos_event[event], len = size, src_allele = 1, allele = nAllele))
+      CNAs = append(CNAs,CNA(type = "A", Chr, chr_pos = pos_event[event], len = size, src_allele = 1, allele = nAllele))
       nAllele = nAllele + 1 
   
     } else if(CN == '2:0') {
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
       
-      CNAs = append(CNAs, CNA(type = "D", "22", chr_pos = pos_event[event], len = size,  allele = 1))
+      CNAs = append(CNAs, CNA(type = "D", Chr, chr_pos = pos_event[event], len = size,  allele = 1))
       
     } else if(CN == '3:1'){
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size,  src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size,  src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
       
     } else if(CN == '3:2'){
-      print(nAllele)
       
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size,  src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size,  src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size,  src_allele = 1, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size,  src_allele = 1, allele = nAllele))
       nAllele = nAllele + 1 
 
     } else if(CN == '3:0'){
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size,  src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size,  src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
-      CNAs = append(CNAs, CNA(type = "D", "22", chr_pos = pos_event[event], len = size,  allele = 1))
+      CNAs = append(CNAs, CNA(type = "D", Chr, chr_pos = pos_event[event], len = size,  allele = 1))
       
     } else if(CN == '3:3'){
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size, src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size,  src_allele = 0, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size,  src_allele = 0, allele = nAllele))
       nAllele = nAllele + 1 
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size,  src_allele = 1, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size,  src_allele = 1, allele = nAllele))
       nAllele = nAllele + 1 
-      CNAs = append(CNAs, CNA(type = "A", "22", chr_pos = pos_event[event], len = size,  src_allele = 1, allele = nAllele))
+      CNAs = append(CNAs, CNA(type = "A", Chr, chr_pos = pos_event[event], len = size,  src_allele = 1, allele = nAllele))
       nAllele = nAllele + 1 
     } 
     
