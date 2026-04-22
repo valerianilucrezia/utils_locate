@@ -65,7 +65,7 @@ for (sim in Nsims){
                                            num_of_preneoplatic_indels = 200)
   
   # store CNAs events
-  events <- phylo_forest$get_bulk_allelic_fragmentation('Sample') %>% filter(chr == 1)
+  events <- phylo_forest$get_bulk_allelic_fragmentation('Sample')
   saveRDS(object = events, file = paste0(res_dir, '/cna_event.RDS'))
   
   plot_events <- plot_allelic_fragmentation(events = events)

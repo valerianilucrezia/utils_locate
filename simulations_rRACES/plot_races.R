@@ -19,7 +19,8 @@ plot_allelic_fragmentation <- function(events, name = ''){
     geom_segment(data = data, aes(x = begin, xend = end, y = minor-0.03), col = 'indianred3', linewidth = 1.5) +
     ggtitle(name) + 
     scale_fill_manual(values = col_seg) + 
-    ylab('CN')
+    ylab('CN') +
+    xlim(min(data$begin), max(data$end)) 
   return(plt)
 }
 

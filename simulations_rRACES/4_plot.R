@@ -35,25 +35,25 @@ if (type == 'clonal'){
         cli::cli_text('Processing {simulation}-{comb}')
   
         res_dir <- paste0(dir, comb)
-        # event <- readRDS(paste0(dir, '/cna_event.RDS'))
-        # bps <- event %>% tidyr::pivot_longer(c(begin, end)) %>% pull(value) %>% unique()
-        # 
-        # data <- readRDS(paste0(res_dir, '/seq_res.RDS'))
-        # snv <- get_somatic_data(data, sample = 'Sample')
-        # snp <- get_germline_data(data, sample = 'Sample') 
-        # 
-        # filt_snp <- snp %>% 
-        #   filter(VAF.normal > 0.35, VAF.normal < 0.75) %>%
-        #   filter(VAF.tumour > 0.1, VAF.tumour < 0.99) %>%
-        #   filter(ref.tumour  %in% c('A', 'C', 'T', 'G')) %>%
-        #   filter(ALT.tumour  %in% c('A', 'C', 'T', 'G')) %>%
-        #   filter(ALT.tumour != ref.tumour)
-        #   
-        # vaf_smooth <- mirro_and_smoothing(sv = snv, 
-        #                             sp = filt_snp, 
-        #                             save = FALSE)
+        event <- readRDS(paste0(dir, '/cna_event.RDS'))
+        bps <- event %>% tidyr::pivot_longer(c(begin, end)) %>% pull(value) %>% unique()
+         
+        data <- readRDS(paste0(res_dir, '/seq_res.RDS'))
+        snv <- get_somatic_data(data, sample = 'Sample')
+        snp <- get_germline_data(data, sample = 'Sample') 
+         
+        filt_snp <- snp %>% 
+           filter(VAF.normal > 0.35, VAF.normal < 0.75) %>%
+           filter(VAF.tumour > 0.1, VAF.tumour < 0.99) %>%
+           filter(ref.tumour  %in% c('A', 'C', 'T', 'G')) %>%
+           filter(ALT.tumour  %in% c('A', 'C', 'T', 'G')) %>%
+           filter(ALT.tumour != ref.tumour)
+           
+        vaf_smooth <- mirro_and_smoothing(sv = snv, 
+                                     sp = filt_snp, 
+                                     save = FALSE)
       
-        vaf_smooth <- readRDS(paste0(res_dir, '/mirr_smooth_snv.RDS'))
+        #vaf_smooth <- readRDS(paste0(res_dir, '/mirr_smooth_snv.RDS'))
         bps <- vaf_smooth %>% 
           mutate(new_pos = 1:n()) %>% 
           group_by(seg_id,CN) %>% 
@@ -68,8 +68,8 @@ if (type == 'clonal'){
         # plot_gw(germline = vaf_smooth %>% rename(VAF.tumour = mean_baf, DR = mean_dr, CN.tumour = CN, from.tumour = pos), 
         #           somatic = vaf_smooth %>% rename(VAF = vaf, from = pos) %>% filter(VAF > 0.1), bp = NULL))
         # 
-        # saveRDS(file = paste0(res_dir, '/mirr_smooth_snv.RDS'), object = vaf_smooth)
-        # write.csv(vaf_smooth, file = paste0(res_dir, '/mirr_smooth_snv.csv'), quote = F, row.names = F)
+        saveRDS(file = paste0(res_dir, '/mirr_smooth_snv.RDS'), object = vaf_smooth)
+        write.csv(vaf_smooth, file = paste0(res_dir, '/mirr_smooth_snv.csv'), quote = F, row.names = F)
         
         # plt <- patchwork::wrap_plots(plot_gw(germline = filt_snp, somatic = snv, bp = bps), 
         #                              plot_hist_BAF(filt_snp), 

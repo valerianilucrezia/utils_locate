@@ -2,13 +2,11 @@
 #SBATCH --partition=GENOA
 #SBATCH --job-name=seq_ProCESS_locate
 #SBATCH --nodes=1
-#SBATCH --array=1-30
-####SBARCH --tasks-per-node=1
-#SBARCH --cpus-per-task=2
+#SBATCH --array=1-60
+#SBATCH --cpus-per-task=2
 #SBATCH --mem 50g
 #SBATCH --time=48:00:00
-#SBATCH --output=seq_%a.out
-####SBATCH --output=sim.out
+#SBATCH --output=log/post_%a.out
 
 sim=${SLURM_ARRAY_TASK_ID}
 echo $sim
